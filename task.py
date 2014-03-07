@@ -119,17 +119,6 @@ def getBackList():
 ################################################################################################
 ################################################################################################
 
-def expandShortTID(shortTID):
-  tids = []
-  service = getService()
-  (front, back) = getListIDs()
-  for taskDict in service.tasks().list(tasklist=back).execute()['items']:
-    if re.search(shortTID, taskDict['id']):
-      tids.append(taskDict['id'])
-  if(len(tids) == 0):
-    fail("No tasks match " + shortTID)
-  return tids
-
 class Task:
   @classmethod
   def fromStrings(cls, _text, _repeat):
@@ -189,33 +178,37 @@ def addTask(args):
   print task
 
 def listTasks(args):
-  for task in getBackList():
-    print task
-
+  pass
 
 def pushTasks(args):
   pass
 
-def showTask(args):
-  shortTID = args.pop(0)
-  service = getService()
-  (front, back) = getListIDs()
-  
-  tids = expandShortTID(shortTID, service)
-  for tid in tids:
-    task = Task.fromTID(tid)
-    print task
+def showTasks(args):
+  if len(args) == 0:
+    pattern = ".*"
+  else:
+    pattern = "|".join(args)
+
+  ok = False
+  for task in getBackList():
+    if(re.search(pattern, task.tid)):
+      ok = True
+      print task
+
+  if(not ok): 
+    fail("No tasks match " + pattern)
 
 def deleteTask(args):
-  shortTID = args.pop(0)
-  service = getService()
-  (front, back) = getListIDs()
-  tids = expandShortTID(shortTID)
-  if len(tids) > 1:
-    showTask([shortTID])
-    fail("Multiple matches for " + shortTID)
-  else:
-    service.tasks().delete(tasklist=back, task=tids[0]).execute() 
+  pass
+#   shortTID = args.pop(0)
+#   service = getService()
+#   (front, back) = getListIDs()
+#   tids = expandShortTID(shortTID)
+#   if len(tids) > 1:
+#     showTasks([shortTID])
+#     fail("Multiple matches for " + shortTID)
+#   else:
+#     service.tasks().delete(tasklist=back, task=tids[0]).execute() 
 
 
 def fail(message):
@@ -229,8 +222,7 @@ def main(args):
   dispatch = {
     "add": addTask,
     "push": pushTasks,
-    "list": listTasks,
-    "show": showTask,
+    "show": showTasks,
     "delete": deleteTask
   }
 
