@@ -1,6 +1,21 @@
 #!/usr/bin/python
 
-# From: https://developers.google.com/google-apps/tasks/instantiate
+
+# Use two lists: 
+# - Main list: Seen by user.
+# - Back list: Used for storage.
+# Verbs:
+# - push: Check for tasks from back list that should be added to main list
+# - now: Add a task to main list immedidately
+# - future: Add a task to the back list, to be moved to main list at a given date in the future.
+# - list: Show tasks in the back list, with a unique ID for each one.
+# - update: Change the description or recurrence options of a back list item, identified by its unique ID.
+# - delete: Remove a back list item.
+# Recurrence options:
+# - once(date)
+# - month(dayOfMonth[,numberOfMonths=1])
+# - year(date)
+# - week(dayOfWeek)
 
 import gflags
 import httplib2
@@ -13,10 +28,20 @@ from oauth2client.file import Storage
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.tools import run
 
+################################################################################
+################################################################################
+# From: https://developers.google.com/google-apps/tasks/instantiate
+service = None
 def getService():
 # Authenticate the user (possibly requiring them to authorize this app using
 # their browser) and return a service object that can access that user's Task
 # data.
+
+  global service
+
+  if service is not None:
+    return service
+
   FLAGS = gflags.FLAGS
 
   # Set up a Flow object to be used if we need to authenticate. This
@@ -56,8 +81,9 @@ def getService():
   return service
 
 ################################################################################################
-def getListIDs(service):
+def getListIDs():
   # Get and return the IDs for the user's front and back lists.
+  service = getService() 
   tasklists = service.tasklists().list().execute()
   for tasklist in tasklists['items']:
     if(tasklist['title'] == "Jason's list"):
@@ -66,24 +92,10 @@ def getListIDs(service):
       back = tasklist['id']
   return (front, back)
 
-# Use two lists: 
-# - Main list: Seen by user.
-# - Back list: Used for storage.
-# Verbs:
-# - push: Check for tasks from back list that should be added to main list
-# - now: Add a task to main list immedidately
-# - future: Add a task to the back list, to be moved to main list at a given date in the future.
-# - list: Show tasks in the back list, with a unique ID for each one.
-# - update: Change the description or recurrence options of a back list item, identified by its unique ID.
-# - delete: Remove a back list item.
-# Recurrence options:
-# - once(date)
-# - month(dayOfMonth[,numberOfMonths=1])
-# - year(date)
-# - week(dayOfWeek)
 
-def expandShortTID(shortTID, service, back):
+def expandShortTID(shortTID, back):
   tids = []
+  service = getService()
   for taskDict in service.tasks().list(tasklist=back).execute()['items']:
     if re.search(shortTID, taskDict['id']):
       tids.append(taskDict['id'])
@@ -110,7 +122,8 @@ class Task:
     return r;
 
   @classmethod
-  def fromTID(cls, tid, service, back):
+  def fromTID(cls, tid, back):
+    service = getService()
     dct = service.tasks().get(tasklist=back, task=tid).execute()
     return Task.fromDict(dct)
 
@@ -121,7 +134,7 @@ class Task:
       return "[------] " + self.repeat + ": " + self.text
 
 
-  def store(self, service, back):
+  def store(self, back):
     # TODO: Logic to update instead of creating a new one.
     # (if tid is not None: ...)
     task = {
@@ -130,6 +143,7 @@ class Task:
         'repeat': self.repeat
       }.__repr__()
     }
+    service = getService()
     result = service.tasks().insert(tasklist=back, body=task).execute()
     self.tid = result['id']
 
@@ -138,7 +152,7 @@ def addTask(args):
   # TODO: Reject duplicate texts.
   # TODO: Verify args.
   service = getService()
-  (front, back) = getListIDs(service)
+  (front, back) = getListIDs()
   repeat = args.pop(0)
   text = " ".join(args)
   task = Task.fromStrings(text, repeat)
@@ -147,7 +161,7 @@ def addTask(args):
 
 def listTasks(args):
   service = getService()
-  (front, back) = getListIDs(service)
+  (front, back) = getListIDs()
   for taskDict in service.tasks().list(tasklist=back).execute()['items']:
     task = Task.fromDict(taskDict)
     print task
@@ -162,7 +176,7 @@ def pushTasks(args):
 def showTask(args):
   shortTID = args.pop(0)
   service = getService()
-  (front, back) = getListIDs(service)
+  (front, back) = getListIDs()
   
   tids = expandShortTID(shortTID, service, back);
   for tid in tids:
@@ -172,7 +186,7 @@ def showTask(args):
 def deleteTask(args):
   shortTID = args.pop(0)
   service = getService()
-  (front, back) = getListIDs(service)
+  (front, back) = getListIDs()
   tids = expandShortTID(shortTID, service, back);
   if len(tids) > 1:
     showTask([shortTID])
