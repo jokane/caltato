@@ -80,22 +80,28 @@ def getService():
   
   return service
 
+
 ################################################################################################
+front = None
+back = None
 def getListIDs():
   # Get and return the IDs for the user's front and back lists.
-  service = getService() 
-  tasklists = service.tasklists().list().execute()
-  for tasklist in tasklists['items']:
-    if(tasklist['title'] == "Jason's list"):
-      front = tasklist['id']
-    if(tasklist['title'] == "Back list"):
-      back = tasklist['id']
+  global front, back
+  if(front is None or back is None):
+    service = getService() 
+    tasklists = service.tasklists().list().execute()
+    for tasklist in tasklists['items']:
+      if(tasklist['title'] == "Jason's list"):
+        front = tasklist['id']
+      if(tasklist['title'] == "Back list"):
+        back = tasklist['id']
   return (front, back)
 
 
-def expandShortTID(shortTID, back):
+def expandShortTID(shortTID):
   tids = []
   service = getService()
+  (front, back) = getListIDs()
   for taskDict in service.tasks().list(tasklist=back).execute()['items']:
     if re.search(shortTID, taskDict['id']):
       tids.append(taskDict['id'])
@@ -122,8 +128,9 @@ class Task:
     return r;
 
   @classmethod
-  def fromTID(cls, tid, back):
+  def fromTID(cls, tid):
     service = getService()
+    (front, back) = getListIDs()
     dct = service.tasks().get(tasklist=back, task=tid).execute()
     return Task.fromDict(dct)
 
@@ -134,7 +141,7 @@ class Task:
       return "[------] " + self.repeat + ": " + self.text
 
 
-  def store(self, back):
+  def store(self):
     # TODO: Logic to update instead of creating a new one.
     # (if tid is not None: ...)
     task = {
@@ -144,6 +151,7 @@ class Task:
       }.__repr__()
     }
     service = getService()
+    (front, back) = getListIDs()
     result = service.tasks().insert(tasklist=back, body=task).execute()
     self.tid = result['id']
 
@@ -156,7 +164,7 @@ def addTask(args):
   repeat = args.pop(0)
   text = " ".join(args)
   task = Task.fromStrings(text, repeat)
-  task.store(service, back)
+  task.store()
   print task
 
 def listTasks(args):
@@ -178,16 +186,16 @@ def showTask(args):
   service = getService()
   (front, back) = getListIDs()
   
-  tids = expandShortTID(shortTID, service, back);
+  tids = expandShortTID(shortTID, service)
   for tid in tids:
-    task = Task.fromTID(tid, service, back)
+    task = Task.fromTID(tid)
     print task
 
 def deleteTask(args):
   shortTID = args.pop(0)
   service = getService()
   (front, back) = getListIDs()
-  tids = expandShortTID(shortTID, service, back);
+  tids = expandShortTID(shortTID)
   if len(tids) > 1:
     showTask([shortTID])
     fail("Multiple matches for " + shortTID)
