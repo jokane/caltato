@@ -293,6 +293,7 @@ def main(args):
     "add": addTask,
     "push": pushTasks,
     "show": showTasks,
+    "list": showTasks,
     "delete": deleteTask
   }
 
