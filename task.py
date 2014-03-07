@@ -82,6 +82,7 @@ def getService():
 
 
 ################################################################################################
+################################################################################################
 front = None
 back = None
 def getListIDs():
@@ -97,6 +98,26 @@ def getListIDs():
         back = tasklist['id']
   return (front, back)
 
+################################################################################################
+################################################################################################
+bl = None
+def getBackList():
+  # Return a list of the tasks in the back list. 
+  global bl
+
+  if bl is not None:
+    return bl
+
+  bl = []
+  service = getService()
+  (front, back) = getListIDs()
+  for taskDict in service.tasks().list(tasklist=back).execute()['items']:
+    bl.append(Task.fromDict(taskDict))
+  
+  return bl
+  
+################################################################################################
+################################################################################################
 
 def expandShortTID(shortTID):
   tids = []
@@ -168,14 +189,8 @@ def addTask(args):
   print task
 
 def listTasks(args):
-  service = getService()
-  (front, back) = getListIDs()
-  for taskDict in service.tasks().list(tasklist=back).execute()['items']:
-    task = Task.fromDict(taskDict)
+  for task in getBackList():
     print task
-
-    task = Task.fromDict(taskDict)
-
 
 
 def pushTasks(args):
