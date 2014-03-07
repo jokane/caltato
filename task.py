@@ -112,8 +112,10 @@ def getBackList():
   bl = []
   service = getService()
   (front, back) = getListIDs()
-  for taskDict in service.tasks().list(tasklist=back).execute()['items']:
-    bl.append(Task.fromDict(taskDict))
+  items = service.tasks().list(tasklist=back).execute().get('items', [])
+  if items is not None:
+    for taskDict in items:
+      bl.append(Task.fromDict(taskDict))
   
   return bl
   
@@ -122,11 +124,13 @@ def getBackList():
 
 class Task:
   @classmethod
-  def fromStrings(cls, _text, _repeat):
+  def fromStrings(cls, _title, _repeat):
     r = cls();
-    r.text = _text;
+    r.title = _title;
     r.repeat = _repeat;
     r.tid = None
+    r.history = []
+    r.dct = {}
     return r;
 
   @classmethod
@@ -134,36 +138,41 @@ class Task:
     notes = eval(dct.get('notes', '{}'))
     r = cls();
     r.tid = dct['id']
-    r.text = dct['title']
+    r.title = dct['title']
     r.repeat = notes.get('repeat', '')
+    r.history = notes.get('history', '[]')
+    r.dct = dct
     return r;
 
-  @classmethod
-  def fromTID(cls, tid):
-    service = getService()
-    (front, back) = getListIDs()
-    dct = service.tasks().get(tasklist=back, task=tid).execute()
-    return Task.fromDict(dct)
-
   def __str__(self):
+    r = ""
     if self.tid is not None:
-      return "[" + self.tid[-6:] + "] " + self.repeat + ": " + self.text
+      r = r + "[" + self.tid[-6:] + "] "
     else:
-      return "[------] " + self.repeat + ": " + self.text
+      r = r + "[------]"
+    r = r + self.repeat + ": " + self.title 
+    if len(self.history) > 0:
+      r += " (pushed " + ",".join(self.history) + ")"
+    return r
 
   def store(self):
     # TODO: Logic to update instead of creating a new one.
     # (if tid is not None: ...)
-    task = {
-      'title' : self.text,
-      'notes' : {
-        'repeat': self.repeat
+    self.dct['title'] = self.title
+    self.dct['notes'] = {
+        'repeat': self.repeat,
+        'history': self.history
       }.__repr__()
-    }
     service = getService()
     (front, back) = getListIDs()
-    result = service.tasks().insert(tasklist=back, body=task).execute()
-    self.tid = result['id']
+
+    if self.tid is None:
+      # Create a new backlist task.
+      result = service.tasks().insert(tasklist=back, body=self.dct).execute()
+      self.tid = result['id']
+    else:
+      # Update an existing task.
+      service.tasks().update(tasklist=back, task=self.tid, body=self.dct).execute()
 
   def delete(self):
     service = getService()
@@ -179,20 +188,24 @@ class Task:
   #   None if the repeat string does not make sense.
 
     # When did we last push this task?
-    last = datetime.date.fromordinal(1)
+    if len(self.history)==0:
+      last = datetime.date.fromordinal(1)
+    else:
+      last = datetime.datetime.strptime(self.history[0], "%Y-%m-%d").date()
 
     # When are we now?
     today = datetime.date.today()
+
     
     # Try to match the repeat string.
     # 1. An exact date.
     match = re.match("(\d\d\d\d)-(\d\d)-(\d\d)", self.repeat)
     if match:
-      when = datetime.date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+      when = datetime.datetime.strptime(self.repeat, "%Y-%m-%d").date()
       if(when > today):
         # Not time yet.
         return False
-      elif(last > when):
+      elif(last >= when):
         # Already done.
         return False
       else:
@@ -207,22 +220,24 @@ class Task:
     # TODO: Maintain a history of when this happened.
     # TODO: Update the backlist item to store the history
     # TODO: Use that history in due() above.
+    # TODO: Use a shorter ID in the notes.
     service = getService()
     (front, back) = getListIDs()
     task = {
-      'title' : self.text,
+      'title' : self.title,
       'notes' : self.tid
     }
-    result = service.tasks().insert(tasklist=front, body=task).execute()
+    service.tasks().insert(tasklist=front, body=task).execute()
+    self.history.append(str(datetime.date.today()))
 
 def addTask(args):
-  # TODO: Reject duplicate texts.
+  # TODO: Reject duplicate titles.
   # TODO: Verify args.
   service = getService()
   (front, back) = getListIDs()
   repeat = args.pop(0)
-  text = " ".join(args)
-  task = Task.fromStrings(text, repeat)
+  title = " ".join(args)
+  task = Task.fromStrings(title, repeat)
   task.store()
   print task
 
@@ -230,6 +245,7 @@ def pushTasks(args):
   for task in getBackList():
     if task.due():
       task.push()
+      task.store()
       print task
 
 def showTasks(args):
