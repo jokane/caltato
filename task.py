@@ -150,7 +150,6 @@ class Task:
     else:
       return "[------] " + self.repeat + ": " + self.text
 
-
   def store(self):
     # TODO: Logic to update instead of creating a new one.
     # (if tid is not None: ...)
@@ -165,6 +164,11 @@ class Task:
     result = service.tasks().insert(tasklist=back, body=task).execute()
     self.tid = result['id']
 
+  def delete(self):
+    service = getService()
+    (front, back) = getListIDs()
+    service.tasks().delete(tasklist=back, task=self.tid).execute()
+
 
 def addTask(args):
   # TODO: Reject duplicate texts.
@@ -176,9 +180,6 @@ def addTask(args):
   task = Task.fromStrings(text, repeat)
   task.store()
   print task
-
-def listTasks(args):
-  pass
 
 def pushTasks(args):
   pass
@@ -199,16 +200,21 @@ def showTasks(args):
     fail("No tasks match " + pattern)
 
 def deleteTask(args):
-  pass
-#   shortTID = args.pop(0)
-#   service = getService()
-#   (front, back) = getListIDs()
-#   tids = expandShortTID(shortTID)
-#   if len(tids) > 1:
-#     showTasks([shortTID])
-#     fail("Multiple matches for " + shortTID)
-#   else:
-#     service.tasks().delete(tasklist=back, task=tids[0]).execute() 
+  pattern = args.pop(0)
+
+  matches = []
+  for task in getBackList():
+    if(re.search(pattern, task.tid)):
+      matches.append(task)
+  
+  if len(matches) == 0:
+    fail("No match for " + pattern)
+  elif len(matches) > 1:
+    showTasks([pattern])
+    fail("Multiple matches for " + pattern)
+  else:
+    matches[0].delete()
+    print matches[0]
 
 
 def fail(message):
