@@ -22,6 +22,7 @@ import httplib2
 import os
 import sys
 import re
+import datetime
 
 from apiclient.discovery import build
 from oauth2client.file import Storage
@@ -170,6 +171,18 @@ class Task:
     service.tasks().delete(tasklist=back, task=self.tid).execute()
 
 
+  def due(self):
+  # Is it time to insert this task into the front list?
+    match = re.match("(\d\d\d\d)-(\d\d)-(\d\d)", self.repeat)
+    if match:
+      print "Year: ", match.group(1)
+      print "Month: ", match.group(2)
+      print "Day: ", match.group(3)
+
+    # Nothing worked.
+    return False
+      
+
 def addTask(args):
   # TODO: Reject duplicate texts.
   # TODO: Verify args.
@@ -182,7 +195,9 @@ def addTask(args):
   print task
 
 def pushTasks(args):
-  pass
+  for task in getBackList():
+    if task.due():
+      print task
 
 def showTasks(args):
   if len(args) == 0:
