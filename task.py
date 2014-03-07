@@ -173,15 +173,47 @@ class Task:
 
   def due(self):
   # Is it time to insert this task into the front list?
+  # Returns:
+  #   True if the repeat string makes sense and it's time to push.
+  #   False if the repeat string makes sense but it's not time to push.
+  #   None if the repeat string does not make sense.
+
+    # When did we last push this task?
+    last = datetime.date.fromordinal(1)
+
+    # When are we now?
+    today = datetime.date.today()
+    
+    # Try to match the repeat string.
+    # 1. An exact date.
     match = re.match("(\d\d\d\d)-(\d\d)-(\d\d)", self.repeat)
     if match:
-      print "Year: ", match.group(1)
-      print "Month: ", match.group(2)
-      print "Day: ", match.group(3)
+      when = datetime.date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+      if(when > today):
+        # Not time yet.
+        return False
+      elif(last > when):
+        # Already done.
+        return False
+      else:
+        return True
 
-    # Nothing worked.
-    return False
-      
+    # Nothing matched.  The repeat specification is ill-formed.
+    return None
+
+  def push(self):
+  # Insert this item into the front list.  Generally, this should only be
+  # called only when self.due() is true.
+    # TODO: Maintain a history of when this happened.
+    # TODO: Update the backlist item to store the history
+    # TODO: Use that history in due() above.
+    service = getService()
+    (front, back) = getListIDs()
+    task = {
+      'title' : self.text,
+      'notes' : self.tid
+    }
+    result = service.tasks().insert(tasklist=front, body=task).execute()
 
 def addTask(args):
   # TODO: Reject duplicate texts.
@@ -197,6 +229,7 @@ def addTask(args):
 def pushTasks(args):
   for task in getBackList():
     if task.due():
+      task.push()
       print task
 
 def showTasks(args):
