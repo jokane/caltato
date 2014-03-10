@@ -16,7 +16,7 @@ from oauth2client.tools import run
 ################################################################################
 ################################################################################
 # From: https://developers.google.com/google-apps/tasks/instantiate
-def getService():
+def getServices():
 # Authenticate the user (possibly requiring them to authorize this app using
 # their browser) and return a service object that can access that user's Task
 # data.
@@ -33,7 +33,7 @@ def getService():
   FLOW = OAuth2WebServerFlow(
       client_id='xxxxx',
       client_secret='xxxxx',
-      scope='https://www.googleapis.com/auth/tasks',
+      scope='https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar',
       user_agent='task/0.1')
 
   # To disable the local server feature, uncomment the following line:
@@ -52,12 +52,12 @@ def getService():
   http = httplib2.Http()
   http = credentials.authorize(http)
 
-  # Build a service object for interacting with the API. Visit
-  # the Google APIs Console
-  # to get a developerKey for your own application.
-  service = build(serviceName='tasks', version='v1', http=http);
+  # Build a service object for interacting with the API. Visit the Google APIs
+  # Console to get a developerKey for your own application.
+  calService = build(serviceName='calendar', version='v3', http=http);
+  taskService = build(serviceName='tasks', version='v1', http=http);
   
-  return service
+  return (calService, taskService)
 
 
 
@@ -66,6 +66,34 @@ def fail(message):
   sys.exit(1)
 
 def main(args):
-  pass
+  (calService, taskService) = getServices()
+
+  # Construct datetime objects for the beginning and ending of today.
+  now = datetime.datetime.today()
+  startTime = datetime.datetime.combine(now, datetime.time(0, 0, 1))
+  endTime = datetime.datetime.combine(now, datetime.time(23, 59, 59))
+  print startTime
+  print endTime
+  
+  # Get the calendar events.
+  token = None
+  while True:
+    events = calService.events().list(
+      calendarId='primary',
+      maxResults=10000,
+      pageToken=token,
+      singleEvents=True
+    ).execute()
+
+    for event in events['items']:
+      print event;
+      summary = event.get('summary', '').encode('ascii', 'ignore')
+      description = event.get('description', '').encode('ascii', 'ignore')
+       
+
+    token = events.get('nextPageToken')
+    if token is None:
+     break
+
 
 main(sys.argv)
