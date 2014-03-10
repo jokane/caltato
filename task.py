@@ -84,12 +84,17 @@ def main(args):
     for event in events['items']:
       summary = event.get('summary', '').encode('ascii', 'ignore')
       description = event.get('description', '').encode('ascii', 'ignore')
-      for match in re.finditer(r"task(\(.*\))", description):
+      for match in re.finditer(r"task\((.*)\)", description):
         # Remember the command we just found.
         command = match.group(1) 
 
         # Split it into an offset and a message.
-        match = re.match("", command)
+        match = re.match(r"([+-]\d*), \"?(.*)\"?", command)
+        if match is not None:
+          interval = int(match.group(1))
+          message = match.group(2)
+        else:
+          fail("Could not parse this command:" + command)
 
         # The results can contain either a date or a datetime, depending on
         # whether or not it's an all-day event.  These different kinds of
@@ -105,10 +110,16 @@ def main(args):
           int(match.group(3))
         )
 
+        # Figure out when this task should be added to the task list.
+        target = eventStart + datetime.timedelta(days=interval)
+
         print "Summary: ", summary
-        print "Command: ", match.group(0)
-        print "Start: ", eventStart
-        print 
+        print "Command: ", command
+        print "Event start: ", eventStart
+        print "Target date: ", target
+        print "Interval: ", interval
+        print "Message: ", message
+        print
 
     token = events.get('nextPageToken')
     if token is None:
