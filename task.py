@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
-
 import gflags
 import httplib2
 import os
 import sys
 import re
 import datetime
+import logging
 
 from apiclient.discovery import build
 from oauth2client.file import Storage
@@ -59,13 +59,17 @@ def getServices():
   
   return (calService, taskService)
 
-
-
-def fail(message):
-  sys.stderr.write(message + "\n")
-  sys.exit(1)
-
 def main(args):
+  # Keep a log, so we know what's happening.
+  logging.basicConfig(
+    filename=os.environ['HOME']+'/.task_log',
+    level=logging.INFO
+  )
+
+  logging.info("************************************************************");
+  logging.info("Starting at %s", datetime.datetime.now())
+
+  # Authenticate.
   (calService, taskService) = getServices()
 
   # When are we now?
@@ -82,12 +86,15 @@ def main(args):
     ).execute()
 
     for event in events['items']:
+      logging.debug("Got an event: %s", event)
       summary = event.get('summary', '').encode('ascii', 'ignore')
       description = event.get('description', '').encode('ascii', 'ignore')
       for line in description.split("\n"):
         for match in re.finditer(r"^task:(.*)", line):
           # Remember the command we just found.
           command = match.group(1) 
+          logging.info("In this event: %s", event)
+          logging.info("  Found a command: %s", command)
 
           # Look for special codes on this line:
           # 1. Extract an offset from the event's date, if any.
@@ -97,6 +104,7 @@ def main(args):
           if match is not None:
             offset = int(match.group(1))
             command = re.sub(offsetPattern, "", command, 1)
+            logging.info("  Explicit offset is %d", offset)
 
           # 2. ....that's it for now.
 
@@ -121,6 +129,7 @@ def main(args):
 
           # Figure out when this task should be added to the task list.
           target = eventStart + datetime.timedelta(days=offset)
+          logging.info("  Target date is %s.", target)
 
           # Is today the target date?
           if target == today:
@@ -138,14 +147,19 @@ def main(args):
               ).isoformat('T') + 'Z'
 
             # Add this task to the user's task list.
+            logging.info("  Inserting this task: %s", task)
             result = taskService.tasks().insert(
               tasklist='@default',
               body=task
             ).execute()
+            logging.info("  Task Id is %s", result['id'])
+          else:
+            logging.info("  That's not today.  Moving on.")
 
     token = events.get('nextPageToken')
     if token is None:
      break
-
+    
+  logging.info("Done with all events.")
 
 main(sys.argv)
