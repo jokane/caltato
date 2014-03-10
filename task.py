@@ -68,12 +68,8 @@ def fail(message):
 def main(args):
   (calService, taskService) = getServices()
 
-  # Construct datetime objects for the beginning and ending of today.
+  # When are we now?
   now = datetime.datetime.today()
-  startTime = datetime.datetime.combine(now, datetime.time(0, 0, 1))
-  endTime = datetime.datetime.combine(now, datetime.time(23, 59, 59))
-  print startTime
-  print endTime
   
   # Get the calendar events.
   token = None
@@ -86,10 +82,33 @@ def main(args):
     ).execute()
 
     for event in events['items']:
-      print event;
       summary = event.get('summary', '').encode('ascii', 'ignore')
       description = event.get('description', '').encode('ascii', 'ignore')
-       
+      for match in re.finditer(r"task(\(.*\))", description):
+        # Remember the command we just found.
+        command = match.group(1) 
+
+        # Split it into an offset and a message.
+        match = re.match("", command)
+
+        # The results can contain either a date or a datetime, depending on
+        # whether or not it's an all-day event.  These different kinds of
+        # answers appear in differnent places in the 'start' hash.  Since we
+        # only want the date part, extract just that.
+        match = re.search(
+          r"(\d\d\d\d)-(\d\d)-(\d\d)",
+          event['start'].__repr__()
+        )
+        eventStart = datetime.date(
+          int(match.group(1)),
+          int(match.group(2)),
+          int(match.group(3))
+        )
+
+        print "Summary: ", summary
+        print "Command: ", match.group(0)
+        print "Start: ", eventStart
+        print 
 
     token = events.get('nextPageToken')
     if token is None:
