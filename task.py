@@ -88,7 +88,6 @@ def main(args):
         for match in re.finditer(r"^task:(.*)", line):
           # Remember the command we just found.
           command = match.group(1) 
-          print "Command: ", command
 
           # Look for special codes on this line:
           # 1. Extract an offset from the event's date, if any.
@@ -124,14 +123,25 @@ def main(args):
           target = eventStart + datetime.timedelta(days=offset)
 
           # Is today the target date?
-          print "Summary: ", summary
-          print "Event start: ", eventStart
-          print "Target date: ", target
-          print "Offset: ", offset
-          print "Message: ", message
           if target == today:
-            print "***TODAY***"
-          print 
+            # Yes.  Create a new task.
+            task = {
+              'title': message,
+              'notes': "Original event: " + event['htmlLink'],
+            }
+            
+            # If this event is not in the past, add a due date.
+            if offset >= 0:
+              task['due'] = datetime.datetime.combine(
+                eventStart,
+                datetime.time(0,0,0)
+              ).isoformat('T') + 'Z'
+
+            # Add this task to the user's task list.
+            result = taskService.tasks().insert(
+              tasklist='@default',
+              body=task
+            ).execute()
 
     token = events.get('nextPageToken')
     if token is None:
