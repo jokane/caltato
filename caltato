@@ -71,6 +71,13 @@ def getServices(DIR, config):
   
   return (calService, taskService)
 
+def dateToGoogleString(date):
+# Formats the given date as a datetime that Google's API seems to like.
+  return datetime.datetime.combine(
+    date,
+    datetime.time(0,0,0)
+  ).isoformat('T') + 'Z'
+
 def main():
   # Make some sense of the command line arguments.
   parser = argparse.ArgumentParser(description='Copy tasks from Google Calendar to Google Tasks.')
@@ -126,18 +133,28 @@ def main():
     logging.info("Using fakedate: %s", today)
   else:
     today = datetime.date.today()
+
+  # What range should we check in the calendar?
+  maxOffset = int(config.get('maxOffset', 365))
+  timeMin = today + datetime.timedelta(days=-maxOffset)
+  timeMax = today + datetime.timedelta(days=+maxOffset)
   
   # Get the calendar events.
+  numEvents = 0
   token = None
   while True:
     events = calService.events().list(
       calendarId='primary',
       maxResults=10000,
       pageToken=token,
+      timeMin=dateToGoogleString(timeMin),
+      timeMax=dateToGoogleString(timeMax),
       singleEvents=True
     ).execute()
 
+    # Look for task specifications in all of these events.
     for event in events['items']:
+      numEvents = numEvents + 1
       logging.debug("Got an event: %s", event)
       summary = event.get('summary', '').encode('ascii', 'ignore')
       description = event.get('description', '').encode('ascii', 'ignore')
@@ -197,10 +214,7 @@ def main():
             
             # If this event is not in the past, add a due date.
             if offset >= 0:
-              task['due'] = datetime.datetime.combine(
-                eventStart,
-                datetime.time(0,0,0)
-              ).isoformat('T') + 'Z'
+              task['due'] = dateToGoogleString(eventStart)
 
             # Add this task to the user's task list.
             logging.info("  Inserting this task: %s", task)
@@ -225,7 +239,7 @@ def main():
     token = events.get('nextPageToken')
     if token is None:
      break
-    
-  logging.info("Done with all events.")
+
+  logging.info("Done with all %d events.", numEvents)
 
 main()
