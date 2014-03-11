@@ -14,10 +14,11 @@ from oauth2client.file import Storage
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.tools import run
 
+
 ################################################################################
 ################################################################################
 # From: https://developers.google.com/google-apps/tasks/instantiate
-def getServices():
+def getServices(DIR):
 # Authenticate the user (possibly requiring them to authorize this app using
 # their browser) and return a service object that can access that user's Task
 # data.
@@ -43,7 +44,7 @@ def getServices():
   # If the Credentials don't exist or are invalid, run through the native client
   # flow. The Storage object will ensure that if successful the good
   # Credentials will get written back to a file.
-  storage = Storage(os.environ['HOME']+'/.caltato_credentials')
+  storage = Storage(DIR+'/credentials')
   credentials = storage.get()
   if credentials is None or credentials.invalid == True:
     credentials = run(FLOW, storage)
@@ -70,9 +71,16 @@ def main():
   )
   args = parser.parse_args()
 
+
+  # Make sure our directory exists.
+  DIR = os.environ['HOME']+'/.caltato'
+
+  if not os.path.exists(DIR):
+    os.makedirs(DIR)
+
   # Keep a log, so we know what's happening.
   logging.basicConfig(
-    filename=os.environ['HOME']+'/.caltato_log',
+    filename=DIR+'/log',
     level=logging.INFO
   )
 
@@ -80,7 +88,7 @@ def main():
   logging.info("Starting at %s", datetime.datetime.now())
 
   # Authenticate.
-  (calService, taskService) = getServices()
+  (calService, taskService) = getServices(DIR)
 
   # When are we now?
   today = datetime.date.today()
