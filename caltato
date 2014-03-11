@@ -34,7 +34,7 @@ def getServices():
       client_id='xxxxx',
       client_secret='xxxxx',
       scope='https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar',
-      user_agent='catodo/0.1')
+      user_agent='caltato/0.1')
 
   # To disable the local server feature, uncomment the following line:
   FLAGS.auth_local_webserver = False
@@ -42,7 +42,7 @@ def getServices():
   # If the Credentials don't exist or are invalid, run through the native client
   # flow. The Storage object will ensure that if successful the good
   # Credentials will get written back to a file.
-  storage = Storage(os.environ['HOME']+'/.catodo_credentials')
+  storage = Storage(os.environ['HOME']+'/.caltato_credentials')
   credentials = storage.get()
   if credentials is None or credentials.invalid == True:
     credentials = run(FLOW, storage)
@@ -62,7 +62,7 @@ def getServices():
 def main(args):
   # Keep a log, so we know what's happening.
   logging.basicConfig(
-    filename=os.environ['HOME']+'/.catodo_log',
+    filename=os.environ['HOME']+'/.caltato_log',
     level=logging.INFO
   )
 
