@@ -116,6 +116,12 @@ def main():
             command = re.sub(offsetPattern, "", command, 1)
             logging.info("  Explicit offset is %d", offset)
 
+          # 2. $fulldate --> Full date
+          command = re.sub(r"\$fulldate", "{}".format(today), command)
+
+          # 3. $date --> Short date
+          command = re.sub(r"\$date", today.strftime("%B %d"), command)
+
           # Everything left over is the message.  Clean it up a little.
           message = command
           message = re.sub("^ *", "", message)
