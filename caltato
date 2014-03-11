@@ -7,6 +7,7 @@ import sys
 import re
 import datetime
 import logging
+import argparse
 
 from apiclient.discovery import build
 from oauth2client.file import Storage
@@ -59,7 +60,16 @@ def getServices():
   
   return (calService, taskService)
 
-def main(args):
+def main():
+  # Make some sense of the command line arguments.
+  parser = argparse.ArgumentParser(description='Copy tasks from Google Calendar to Google Tasks.')
+  parser.add_argument(
+    '-d', '--dryrun',
+    action='store_true',
+    help='Do not create any tasks.  Print them instead.'
+  )
+  args = parser.parse_args()
+
   # Keep a log, so we know what's happening.
   logging.basicConfig(
     filename=os.environ['HOME']+'/.caltato_log',
@@ -106,8 +116,6 @@ def main(args):
             command = re.sub(offsetPattern, "", command, 1)
             logging.info("  Explicit offset is %d", offset)
 
-          # 2. ....that's it for now.
-
           # Everything left over is the message.  Clean it up a little.
           message = command
           message = re.sub("^ *", "", message)
@@ -148,11 +156,21 @@ def main(args):
 
             # Add this task to the user's task list.
             logging.info("  Inserting this task: %s", task)
-            result = taskService.tasks().insert(
-              tasklist='@default',
-              body=task
-            ).execute()
-            logging.info("  Task Id is %s", result['id'])
+            if not args.dryrun:
+              result = taskService.tasks().insert(
+                tasklist='@default',
+                body=task
+              ).execute()
+              logging.info("  Task Id is %s", result['id'])
+            else:
+              # ...unless this is a dry run.
+              print task['title']
+              print '  ', task['notes']
+              if 'due' in task:
+                print '   Due:', task['due']
+              print
+
+
           else:
             logging.info("  That's not today.  Moving on.")
 
@@ -162,4 +180,4 @@ def main(args):
     
   logging.info("Done with all events.")
 
-main(sys.argv)
+main()
