@@ -182,6 +182,10 @@ def main():
           # 3. $date --> Short date
           command = re.sub(r"\$date", today.strftime("%B %d"), command)
 
+          # 4. $title --> Event summary
+          command = re.sub(r"\$title", summary, command)
+
+
           # Everything left over is the message.  Clean it up a little.
           message = command
           message = re.sub("^ *", "", message)
