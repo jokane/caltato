@@ -150,20 +150,7 @@ def fromCal(args, config, calService, taskService):
             command = re.sub(offsetPattern, "", command, 1)
             logging.info("  Explicit offset is %d", offset)
 
-          # 2. $fulldate --> Full date
-          command = re.sub(r"\$fulldate", "{}".format(today), command)
-
-          # 3. $date --> Short date
-          command = re.sub(r"\$date", today.strftime("%B %d"), command)
-
-          # 4. $title --> Event summary
-          command = re.sub(r"\$title", summary, command)
-
-
-          # Everything left over is the message.  Clean it up a little.
-          message = command
-          message = re.sub("^ *", "", message)
-          message = re.sub(" +", " ", message)
+          # 2. ...that's all for now.
 
           # When does this event start?
           eventStart = findDate(event['start'])
@@ -174,8 +161,25 @@ def fromCal(args, config, calService, taskService):
 
           # Is today the target date?
           if target == today:
-            # Yes.  Create a new task.
+            # Yes.  
             numTasks += 1
+
+            # Look for directives that customize the task text.
+            # 1. $fulldate --> Full date
+            command = re.sub(r"\$fulldate", "{}".format(eventStart), command)
+
+            # 2. $date --> Short date
+            command = re.sub(r"\$date", eventStart.strftime("%m-%d"), command)
+
+            # 3. $title --> Event summary
+            command = re.sub(r"\$title", summary, command)
+
+            # Clean up the message a little.
+            message = command
+            message = re.sub("^ *", "", message)
+            message = re.sub(" +", " ", message)
+
+
             task = {
               'title': message,
               'notes': "Original event: " + event['htmlLink'],
