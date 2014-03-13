@@ -94,19 +94,16 @@ def findDate(thing):
     int(match.group(3))
   )
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
-def fromCal(args, config, calService, taskService):
+def fromCal(args, today, config, calService, taskService):
 # Search the user's default calendar for events that have "task: ...." lines in
 # their description.  If today is that date of that event (or if we're at an
 # offset from that date specified in the task:... line), insert this task into
 # the user's default task list.
-
-  # Which date are we using?
-  if args.fakedate is not None:
-    today = findDate(args.fakedate)
-    logging.info("Using fakedate: %s", today)
-  else:
-    today = datetime.date.today()
 
   # What range should we check in the calendar?
   maxOffset = int(config.get('maxOffset', 365))
@@ -215,8 +212,13 @@ def fromCal(args, config, calService, taskService):
 
   logging.info("Found %d tasks in %d events.", numTasks, numEvents)
 
-def zombieTasks(args, config, taskService):
-# Search the user's default task list that
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+def zombieTasks(args, today, config, taskService):
+# Search the user's default task list for tasks that
 #   1. are marked as complete,
 #   2. mention in their notes that they're zombies with a line like this: "zombie: <offset>"
 #   3. have a completion date at least <offset> days in the past.
@@ -255,6 +257,10 @@ def zombieTasks(args, config, taskService):
     if token is None:
       break
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 def main():
   # Make some sense of the command line arguments.
@@ -301,12 +307,19 @@ def main():
     with open(DIR+"/config") as configFile:
       config = json.load(configFile)
 
+  # Which date are we using?
+  if args.fakedate is not None:
+    today = findDate(args.fakedate)
+    logging.info("Using fakedate: %s", today)
+  else:
+    today = datetime.date.today()
+
   # Authenticate.
   (calService, taskService) = getServices(DIR, config)
 
   # Create tasks from calendar entries.
-  if args.calendar: fromCal(args, config, calService, taskService)
-  if args.zombies: zombieTasks(args, config, taskService)
+  if args.calendar: fromCal(args, today, config, calService, taskService)
+  if args.zombies: zombieTasks(args, today, config, taskService)
 
 
 main()
