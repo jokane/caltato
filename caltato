@@ -216,6 +216,47 @@ def fromCal(args, config, calService, taskService):
 
   logging.info("Found %d tasks in %d events.", numTasks, numEvents)
 
+def zombieTasks(args, config, taskService):
+# Search the user's default task list that
+#   1. are marked as complete,
+#   2. mention in their notes that they're zombies with a line like this: "zombie: <offset>"
+#   3. have a completion date at least <offset> days in the past.
+# For each task meeting these requirements, we update the status to "needsAction".
+
+
+  token = None
+  while True:
+    tasks = taskService.tasks().list(
+      tasklist='@default',
+      maxResults=10000,
+      showHidden=True,
+      pageToken=token
+    ).execute()
+
+    for task in tasks['items']:
+      # Get things into ASCII, so nobody gets hurt.
+      status = task.get('status', '').encode('ascii', 'ignore')
+      notes = task.get('notes', '').encode('ascii', 'ignore')
+
+      # Ignore anything that's not completed.
+      if status != 'completed':
+        continue
+
+      # Look for a zombie spec.  Skip this task if there is none.
+      print notes
+      match = re.search("zombie: (\d+)", notes)
+      if match is None:
+        continue
+
+      offset = match.group(1)
+
+      print task
+      print offset
+
+    token  = tasks.get('nextPageToken')
+    if token is None:
+      break
+
 
 def main():
   # Make some sense of the command line arguments.
@@ -232,7 +273,12 @@ def main():
   parser.add_argument(
     '-c', '--calendar',
     action='store_true',
-    help='Look for tasks in the calendar'
+    help='Look for tasks in the calendar.'
+  )
+  parser.add_argument(
+    '-z', '--zombies',
+    action='store_true',
+    help='Look for zombie tasks.'
   )
   args = parser.parse_args()
 
@@ -262,6 +308,7 @@ def main():
 
   # Create tasks from calendar entries.
   if args.calendar: fromCal(args, config, calService, taskService)
+  if args.zombies: zombieTasks(args, config, taskService)
 
 
 main()
