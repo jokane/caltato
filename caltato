@@ -247,11 +247,26 @@ def zombieTasks(args, today, config, taskService):
       match = re.search("zombie: (\d+)", notes)
       if match is None:
         continue
+      offset = int(match.group(1))
 
-      offset = match.group(1)
+      # When should this task come back from the dead?
+      completedDate = findDate(task['completed'])
+      targetDate = completedDate + datetime.timedelta(days=offset)
 
-      print task
-      print offset
+      if targetDate <= today:
+        if not args.dryrun:
+          task['status'] = 'needsAction'
+          del task['completed']
+          taskService.tasks().update(
+            tasklist='@default',
+            task=task['id'],
+            body=task
+          ).execute()
+        else:
+          print 'Title:', task['title']
+          print '  Completed:', completedDate
+          print '  Offset:', offset
+          print '  Target date:', targetDate
 
     token  = tasks.get('nextPageToken')
     if token is None:
