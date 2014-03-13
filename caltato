@@ -216,9 +216,10 @@ def fromCal(args, config, calService, taskService):
 
   logging.info("Found %d tasks in %d events.", numTasks, numEvents)
 
+
 def main():
   # Make some sense of the command line arguments.
-  parser = argparse.ArgumentParser(description='Copy tasks from Google Calendar to Google Tasks.')
+  parser = argparse.ArgumentParser(description='Create Google Tasks from various sources.')
   parser.add_argument(
     '-d', '--dryrun',
     action='store_true',
@@ -227,6 +228,11 @@ def main():
   parser.add_argument(
     '-f', '--fakedate',
     help='Use this date instead of the current date.'
+  )
+  parser.add_argument(
+    '-c', '--calendar',
+    action='store_true',
+    help='Look for tasks in the calendar'
   )
   args = parser.parse_args()
 
@@ -255,7 +261,7 @@ def main():
   (calService, taskService) = getServices(DIR, config)
 
   # Create tasks from calendar entries.
-  fromCal(args, config, calService, taskService)
+  if args.calendar: fromCal(args, config, calService, taskService)
 
 
 main()
