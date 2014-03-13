@@ -78,6 +78,23 @@ def dateToGoogleString(date):
     datetime.time(0,0,0)
   ).isoformat('T') + 'Z'
 
+def findDate(thing):
+# Try to turn thing into a datetime.date.
+# This can be useful, for example, with results from Google Calendar that can
+# contain either a date or a datetime, depending on whether or not it's an
+# all-day event.  Even worse, these different kinds of answers appear in
+# differnent places in the 'start' hash.  
+  match = re.search(
+    r"(\d\d\d\d)-(\d\d)-(\d\d)",
+    thing.__repr__()
+  )
+  return datetime.date(
+    int(match.group(1)),
+    int(match.group(2)),
+    int(match.group(3))
+  )
+
+
 def fromCal(args, config, calService, taskService):
 # Search the user's default calendar for events that have "task: ...." lines in
 # their description.  If today is that date of that event (or if we're at an
@@ -86,18 +103,7 @@ def fromCal(args, config, calService, taskService):
 
   # Which date are we using?
   if args.fakedate is not None:
-    match = re.search(
-      r"(\d\d\d\d)-(\d\d)-(\d\d)",
-      args.fakedate
-    )
-    if match is None:
-      print >> sys.stderr, "Could not parse fakedate:", args.fakedate
-      sys.exit(1)
-    today = datetime.date(
-      int(match.group(1)),
-      int(match.group(2)),
-      int(match.group(3))
-    )
+    today = findDate(args.fakedate)
     logging.info("Using fakedate: %s", today)
   else:
     today = datetime.date.today()
@@ -159,19 +165,8 @@ def fromCal(args, config, calService, taskService):
           message = re.sub("^ *", "", message)
           message = re.sub(" +", " ", message)
 
-          # The results can contain either a date or a datetime, depending on
-          # whether or not it's an all-day event.  These different kinds of
-          # answers appear in differnent places in the 'start' hash.  Since we
-          # only want the date part, extract just that.
-          match = re.search(
-            r"(\d\d\d\d)-(\d\d)-(\d\d)",
-            event['start'].__repr__()
-          )
-          eventStart = datetime.date(
-            int(match.group(1)),
-            int(match.group(2)),
-            int(match.group(3))
-          )
+          # When does this event start?
+          eventStart = findDate(event['start'])
 
           # Figure out when this task should be added to the task list.
           target = eventStart + datetime.timedelta(days=offset)
@@ -243,7 +238,6 @@ def zombieTasks(args, config, taskService):
         continue
 
       # Look for a zombie spec.  Skip this task if there is none.
-      print notes
       match = re.search("zombie: (\d+)", notes)
       if match is None:
         continue
