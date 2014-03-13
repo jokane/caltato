@@ -78,43 +78,11 @@ def dateToGoogleString(date):
     datetime.time(0,0,0)
   ).isoformat('T') + 'Z'
 
-def main():
-  # Make some sense of the command line arguments.
-  parser = argparse.ArgumentParser(description='Copy tasks from Google Calendar to Google Tasks.')
-  parser.add_argument(
-    '-d', '--dryrun',
-    action='store_true',
-    help='Do not create any tasks.  Print them instead.'
-  )
-  parser.add_argument(
-    '-f', '--fakedate',
-    help='Use this date instead of the current date.'
-  )
-  args = parser.parse_args()
-
-
-  # Figure out which directory to use, and make sure it exists.
-  DIR = os.environ['HOME']+'/.caltato'
-  if not os.path.exists(DIR):
-    os.makedirs(DIR)
-
-  # Keep a log, so we know what's happening.
-  logging.basicConfig(
-    filename=DIR+'/log',
-    level=logging.INFO
-  )
-
-  logging.info("************************************************************")
-  logging.info("Starting at %s", datetime.datetime.now())
-
-  # Read the configuration.
-  configFileName = DIR + "/config"
-  if os.path.exists(configFileName):
-    with open(DIR+"/config") as configFile:
-      config = json.load(configFile)
-
-  # Authenticate.
-  (calService, taskService) = getServices(DIR, config)
+def fromCal(args, config, calService, taskService):
+# Search the user's default calendar for events that have "task: ...." lines in
+# their description.  If today is that date of that event (or if we're at an
+# offset from that date specified in the task:... line), insert this task into
+# the user's default task list.
 
   # Which date are we using?
   if args.fakedate is not None:
@@ -247,5 +215,47 @@ def main():
      break
 
   logging.info("Found %d tasks in %d events.", numTasks, numEvents)
+
+def main():
+  # Make some sense of the command line arguments.
+  parser = argparse.ArgumentParser(description='Copy tasks from Google Calendar to Google Tasks.')
+  parser.add_argument(
+    '-d', '--dryrun',
+    action='store_true',
+    help='Do not create any tasks.  Print them instead.'
+  )
+  parser.add_argument(
+    '-f', '--fakedate',
+    help='Use this date instead of the current date.'
+  )
+  args = parser.parse_args()
+
+
+  # Figure out which directory to use, and make sure it exists.
+  DIR = os.environ['HOME']+'/.caltato'
+  if not os.path.exists(DIR):
+    os.makedirs(DIR)
+
+  # Keep a log, so we know what's happening.
+  logging.basicConfig(
+    filename=DIR+'/log',
+    level=logging.INFO
+  )
+
+  logging.info("************************************************************")
+  logging.info("Starting at %s", datetime.datetime.now())
+
+  # Read the configuration.
+  configFileName = DIR + "/config"
+  if os.path.exists(configFileName):
+    with open(DIR+"/config") as configFile:
+      config = json.load(configFile)
+
+  # Authenticate.
+  (calService, taskService) = getServices(DIR, config)
+
+  # Create tasks from calendar entries.
+  fromCal(args, config, calService, taskService)
+
 
 main()
