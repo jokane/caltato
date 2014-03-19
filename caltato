@@ -225,7 +225,9 @@ def zombieTasks(args, today, config, taskService):
 #   1. are marked as complete,
 #   2. mention in their notes that they're zombies with a line like this: "zombie: <offset>"
 #   3. have a completion date at least <offset> days in the past.
-# For each task meeting these requirements, we update the status to "needsAction".
+# For each task meeting these requirements, we bring the task "back from the dead":
+#   1. Create a new task that's identical, except that "needsAction".
+#   2. Remove the zombie tag from the original.
 
   logging.info("Looking for zombie tasks.")
 
@@ -274,14 +276,25 @@ def zombieTasks(args, today, config, taskService):
         # Yes.
         logging.info("  Target date is in the present or the past.  Updating task.")
         if not args.dryrun:
-          # Update the task.
-          task['status'] = 'needsAction'
-          del task['completed']
+          # Create a new, most identical (but incomplete) task.
+          newTask = {
+            'title' : task['title'],
+            'notes' : task['notes']
+          }
+          taskService.tasks().insert(
+            tasklist='@default',
+            body=newTask
+          ).execute()
+
+          # Update the old task, removing its zombie tag.
+          task['notes'] = re.sub("zombie: (\d+)", "", task['notes'])
+          print task
           taskService.tasks().update(
             tasklist='@default',
             task=task['id'],
             body=task
           ).execute()
+
         else:
           # ...unless this is a dry run.
           print task['title']
