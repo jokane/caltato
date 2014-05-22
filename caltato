@@ -7,6 +7,7 @@ import sys
 import re
 import datetime
 import logging
+import logging.handlers
 import argparse
 import json
 
@@ -343,10 +344,14 @@ def main():
     os.makedirs(DIR)
 
   # Keep a log, so we know what's happening.
-  logging.basicConfig(
-    filename=DIR+'/log',
-    level=logging.INFO
+  rootLogger = logging.getLogger()
+  rootLogger.setLevel(logging.INFO)
+  handler = logging.handlers.RotatingFileHandler(
+    DIR+'/log', 
+    maxBytes=1000000,
+    backupCount=2
   )
+  rootLogger.addHandler(handler)
 
   logging.info("************************************************************")
   logging.info("Starting at %s", datetime.datetime.now())
