@@ -84,7 +84,7 @@ def findDate(thing):
 # This can be useful, for example, with results from Google Calendar that can
 # contain either a date or a datetime, depending on whether or not it's an
 # all-day event.  Even worse, these different kinds of answers appear in
-# differnent places in the 'start' hash.  
+# different places in the 'start' hash.  
   match = re.search(
     r"(\d\d\d\d)-(\d\d)-(\d\d)",
     thing.__repr__()
