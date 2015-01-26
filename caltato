@@ -227,7 +227,7 @@ def zombieTasks(args, today, config, taskService):
 #   2. mention in their notes that they're zombies with a line like this: "zombie: <offset>"
 #   3. have a completion date at least <offset> days in the past.
 # For each task meeting these requirements, we bring the task "back from the dead":
-#   1. Create a new task that's identical, except that "needsAction".
+#   1. Create a new task that's identical, except that it "needsAction".
 #   2. Remove the zombie tag from the original.
 
   logging.info("Looking for zombie tasks.")
