@@ -53,3 +53,10 @@ each morning:
     30 5 * * * projects/caltato/caltato -c -z >> ~/.caltato/output 2>&1
 
 
+## Dependencies
+
+This depends, of course, on the Google API client library for Python.  I install it this way:
+
+   sudo pip install google-api-python-client
+
+
