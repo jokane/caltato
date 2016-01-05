@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import gflags
 import httplib2
 import os
 import sys
@@ -14,18 +13,16 @@ import json
 from apiclient.discovery import build
 from oauth2client.file import Storage
 from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.tools import run
+from oauth2client import tools
 
 
 ################################################################################
 ################################################################################
 # From: https://developers.google.com/google-apps/tasks/instantiate
-def getServices(DIR, config):
+def getServices(DIR, config, flags):
 # Authenticate the user (possibly requiring them to authorize this app using
 # their browser) and return a service object that can access that user's Task
 # data.
-
-  FLAGS = gflags.FLAGS
 
   # Make sure we have a client_id and a client_secret
   if 'client_id' not in config: 
@@ -50,7 +47,7 @@ def getServices(DIR, config):
       user_agent='caltato/0.1')
 
   # To disable the local server feature, uncomment the following line:
-  FLAGS.auth_local_webserver = False
+  flags.auth_local_webserver = False
 
   # If the Credentials don't exist or are invalid, run through the native client
   # flow. The Storage object will ensure that if successful the good
@@ -58,7 +55,7 @@ def getServices(DIR, config):
   storage = Storage(DIR+'/credentials')
   credentials = storage.get()
   if credentials is None or credentials.invalid == True:
-    credentials = run(FLOW, storage)
+    credentials = tools.run_flow(FLOW, storage, flags)
 
   # Create an httplib2.Http object to handle our HTTP requests and authorize it
   # with our good Credentials.
@@ -315,7 +312,7 @@ def zombieTasks(args, today, config, taskService):
 
 def main():
   # Make some sense of the command line arguments.
-  parser = argparse.ArgumentParser(description='Create Google Tasks from various sources.')
+  parser = argparse.ArgumentParser(description='Create Google Tasks from various sources.', parents=[tools.argparser])
   parser.add_argument(
     '-d', '--dryrun',
     action='store_true',
@@ -336,6 +333,7 @@ def main():
     help='Look for zombie tasks.'
   )
   args = parser.parse_args()
+
 
 
   # Figure out which directory to use, and make sure it exists.
@@ -370,7 +368,7 @@ def main():
     today = datetime.date.today()
 
   # Authenticate.
-  (calService, taskService) = getServices(DIR, config)
+  (calService, taskService) = getServices(DIR, config, args)
 
   # Create tasks from calendar entries.
   if args.calendar: fromCal(args, today, config, calService, taskService)
